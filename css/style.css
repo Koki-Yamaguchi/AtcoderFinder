@@ -1,0 +1,54 @@
+.ui.inverted.menu h3 {
+    font-weight : 100;
+}
+
+.ui.inverted.menu {
+    margin-top : 0;
+    margin-bottom : 20px;
+}
+
+.ui.form .inline.fields .field {
+    margin-right : 15px;
+}
+
+table td {
+    width : 33%;
+}
+
+table th {
+    width : 33%;
+}
+
+.ui.inverted.vertical.footer.segment {
+    margin-top : 45px;
+}
+
+#page-top {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    font-size: 77%;
+}
+#page-top a {
+    background: #666;
+    text-decoration: none;
+    color: #fff;
+    width: 80px;
+    padding: 20px 0;
+    text-align: center;
+    display: block;
+    border-radius: 5px;
+}
+#page-top a:hover {
+    text-decoration: none;
+    background: #999;
+}
+
+.ui.checkbox label {
+    cursor: pointer;
+}
+
+#page-top {
+    z-index : 5;
+}
+
