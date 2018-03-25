@@ -1,7 +1,7 @@
 $(function(){
     var get_info = document.location.search;
     var user = get_info.substr(6);
-    console.log(user);
+    //console.log(user);
     if (user == "") {
         return;
     }
@@ -25,7 +25,7 @@ $(function(){
         $('table').find('> tbody > tr').each(function() {
             cell = $($(this).children('td')[1]);
             var problem_id = cell.attr("id");
-            console.log(problem_id);
+            //console.log(problem_id);
             var ac = false;
             var wa = false;
             for (var i = 0; i < len; i++) {
@@ -39,13 +39,10 @@ $(function(){
                 }
             }
             if (ac) {
-                console.log("AC");
                 $(this).attr('class', 'AC');
             } else if (wa) {
-                console.log("WA");
                 $(this).attr('class', 'WA');
             } else {
-                console.log("NO");
                 $(this).attr('class', 'NO');
             }
         });

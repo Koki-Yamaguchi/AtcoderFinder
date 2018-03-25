@@ -22,10 +22,13 @@ def fixed_part1():
     <p id="page-top"><a href="#wrap">トップに戻る</a></p>
 
     <div class="ui inverted menu">
-        <a class="active item">
+        <a class="item" href="./index.html">
             <h3>Atcoder Finder</h3>
         </a>
-        <a class="active item" href="https://github.com/Koki-Yamaguchi/Koki-Yamaguchi.github.io">
+        <a class="item" href="./about.html">
+            <h3>About</h3>
+        </a>
+        <a class="item" href="https://github.com/Koki-Yamaguchi/AtcoderFinder">
             <h3>Source</h3>
         </a>
     </div>
@@ -60,6 +63,25 @@ def filter():
     print("                </div>")
     print("            </div>")
     print("        </div>")
+    print("""        <h4 class='ui top attached header'>ACフィルター</h4>
+        <div class='ui attached segment'>
+            <div class='filter-container'>
+                <div class='filters ui form'>
+                    <div class='inline fields'>
+                        <div class='field'>
+                            <div class='ui checkbox'>
+                                <input type='checkbox' name='タグ' placeholder='notAC' value='notAC'><label>ACしていない問題だけを表示する</label>
+                            </div>
+                        </div>
+                        <div class='field'>
+                            <div class='ui checkbox'>
+                                <input type='checkbox' name='タグ' placeholder='isWA' value='isWA'><label>提出したがACしていない問題だけを表示する</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>""")
 
 def table(type):
     if type == 0:
@@ -84,7 +106,8 @@ def table(type):
     print("            <tbody>")
 
 
-    sql = sqlite3.connect('/usr/share/nginx/html/database/problems.db')
+    #sql = sqlite3.connect('/usr/share/nginx/html/database/problems.db')
+    sql = sqlite3.connect('./database/problems.db')
     cur = sql.cursor()
     if type == 0:
         cur.execute("SELECT * FROM sqlite_master where type='table' and name='AGC'")

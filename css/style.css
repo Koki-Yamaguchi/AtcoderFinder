@@ -1,5 +1,6 @@
 .ui.inverted.menu h3 {
     font-weight : 100;
+    color : gray;
 }
 
 .ui.inverted.menu {
@@ -52,3 +53,6 @@ table th {
     z-index : 5;
 }
 
+.ui.segment {
+    margin-top : 40px;
+}

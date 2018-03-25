@@ -20,7 +20,7 @@ def get_all_data(type):
 
     if type == 0 or type == 2 or type == 3: #AGC or ARC or APC
         res = []
-        for number in range(1, 3):
+        for number in range(1, 22):
             numstr = str(number)
             if len(numstr) == 1:
                 numstr = '00' + numstr
