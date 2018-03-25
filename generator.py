@@ -106,34 +106,14 @@ def table(type):
     print("            <tbody>")
 
 
-    #sql = sqlite3.connect('/usr/share/nginx/html/database/problems.db')
-    sql = sqlite3.connect('./database/problems.db')
+    sql = sqlite3.connect('/usr/share/nginx/html/database/problems.db')
+    #sql = sqlite3.connect('./database/problems.db')
     cur = sql.cursor()
-    if type == 0:
-        cur.execute("SELECT * FROM sqlite_master where type='table' and name='AGC'")
-        ok = cur.fetchone()
-        if ok != None:
-            cur.execute('select * from AGC')
-    elif type == 1:
-        cur.execute("SELECT * FROM sqlite_master where type='table' and name='ABC'")
-        ok = cur.fetchone()
-        if ok != None:
-            cur.execute('select * from ABC')
-    elif type == 2:
-        cur.execute("SELECT * FROM sqlite_master where type='table' and name='ARC'")
-        ok = cur.fetchone()
-        if ok != None:
-            cur.execute('select * from ARC')
-    elif type == 3:
-        cur.execute("SELECT * FROM sqlite_master where type='table' and name='APC'")
-        ok = cur.fetchone()
-        if ok != None:
-            cur.execute('select * from APC')
-    elif type == 4:
-        cur.execute("SELECT * FROM sqlite_master where type='table' and name='Others'")
-        ok = cur.fetchone()
-        if ok != None:
-            cur.execute('select * from Others')
+    pat = ['AGC', 'ABC', 'ARC', 'APC', 'Others']
+    cur.execute("SELECT * FROM sqlite_master where type='table' and name='" + pat[type] + "'")
+    ok = cur.fetchone()
+    if ok != None:
+        cur.execute("select * from " + pat[type])
     res = cur.fetchall()
     for row in res:
         print('                <tr>')

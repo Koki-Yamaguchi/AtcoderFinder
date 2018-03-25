@@ -1,4 +1,4 @@
-import requests, re, webbrowser, glob, sqlite3, time, json, sys, io
+import requests, re, webbrowser, glob, sqlite3, time, json, sys, io, codecs
 from bs4 import BeautifulSoup
 from janome.tokenizer import Tokenizer
 sys.stdin = io.TextIOWrapper(sys.stdin.buffer, encoding='utf-8')
@@ -6,44 +6,29 @@ sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
 
 def get_all_data(type):
-    #'''get json from the web and write it to local file
     html = requests.get('http://kenkoooo.com/atcoder/atcoder-api/info/problems')
     soup = BeautifulSoup(html.text, 'lxml')
     json_data_raw = soup.find("p").string
-    #with open('/usr/share/nginx/html/json/problems.json', mode = 'w', encoding = 'utf-8') as file:
-    with open('./json/problems.json', mode = 'w', encoding = 'utf-8') as file:
-        file.write(json_data_raw)
-    #'''
-    #json_data = open('/usr/share/nginx/html/json/problems.json', 'r')
-    json_data = open('./json/problems.json', 'r')
-    json_dict = json.load(json_data)
-
-    if type == 0 or type == 2 or type == 3: #AGC or ARC or APC
+    json_dict = json.loads(json_data_raw, encoding = 'utf-8')
+    pat = ['agc', 'abc', 'arc', 'apc']
+    if type == 0 or type == 2 or type == 3:
         res = []
-        for number in range(1, 22):
-            numstr = str(number)
-            if len(numstr) == 1:
-                numstr = '00' + numstr
-            elif len(numstr) == 2:
-                numstr = '0' + numstr
-            if type == 0:
-                for data in json_dict:
-                    if data['id'][0:6] == 'agc' + numstr:
-                        res.append([data['id'], data['contest_id'], data['title']])
-            elif type == 2:
-                for data in json_dict:
-                    if data['id'][0:6] == 'arc' + numstr:
-                        res.append([data['id'], data['contest_id'], data['title']])
-            elif type == 3:
-                for data in json_dict:
-                    if data['id'][0:6] == 'apc' + numstr:
-                        res.append([data['id'], data['contest_id'], data['title']])
+        for data in json_dict:
+            if data['id'][0:3] == pat[type]:
+                res.append([data['id'], data['contest_id'], data['title']])
         res.sort()
         return res
-
+    elif type == 4:
+        res = []
+        for data in json_dict:
+            t = data['id'][0:3]
+            if t not in pat:
+                res.append([data['id'], data['contest_id'], data['title']])
+        res.sort()
+        return res
     elif type == 1: #ABC
         res = []
-        for number in range(1, 91):
+        for number in range(1, 1000):
             numstr = str(number)
             if len(numstr) == 1:
                 numstr = '00' + numstr
@@ -52,7 +37,10 @@ def get_all_data(type):
             url = 'https://beta.atcoder.jp/contests/abc' + numstr + '/tasks'
             html = requests.get(url)
             soup = BeautifulSoup(html.text, 'lxml')
-            elems = soup.table.find_all('a')
+            tab= soup.table
+            if tab == None:
+                break
+            elems = tab.find_all('a')
             cnt = 0
             titles = []
             char = ''
@@ -67,27 +55,11 @@ def get_all_data(type):
                     if data['title'] == title:
                         if data['id'][0:3] == 'abc':
                             res.append([data['id'], data['contest_id'], data['title']])
-                            print(data)
                             break
                         elif data['id'][0:3] == 'arc':
                             if data['id'][-1] == 'a' or data['id'][-1] == 'b':
                                 res.append([data['id'], data['contest_id'], data['title']])
-                                print(data)
                                 break
-        return res
-    elif type == 4:
-        res = []
-        cnt = 0
-        ub = 50000
-        for data in json_dict:
-            if cnt > ub:
-                break
-            t = data['id'][0:3]
-            if t != 'agc' and t != 'abc' and t != 'arc' and t != 'apc':
-                res.append([data['id'], data['contest_id'], data['title']])
-                cnt += 1
-        res.sort()
-        print(len(res))
         return res
     else:
         assert false
@@ -108,16 +80,18 @@ def tokenize(text):
     return list
 
 def clean_ja(texts):
-    #stop_words_filename = glob.glob('/usr/share/nginx/html/stop_words.txt')
-    stop_words_filename = glob.glob('./stop_words.txt')
-    f = open(stop_words_filename[0])
-    stop_words = f.read()
+    stop_words_filename = glob.glob('/usr/share/nginx/html/stop_words.txt')
+    #stop_words_filename = glob.glob('./stop_words.txt')
+
+    stop_words = codecs.open('/usr/share/nginx/html/stop_words.txt', 'r', 'utf-8')
+    #stop_words = codecs.open('./stop_words.txt', 'r', 'utf-8')
+
     result = [word for word in texts if word not in stop_words]
+    stop_words.close()
     return result
 
 def get_statement(data):
     url = 'https://beta.atcoder.jp/contests/' + data[1] + '/tasks/' + data[0]
-    print(url)
     html = requests.get(url)
     soup = BeautifulSoup(html.text, 'lxml')
     all_text = soup.find("div", {"id" : "task-statement"})
@@ -161,7 +135,7 @@ def get_codes(data):
     all_url = 'https://beta.atcoder.jp/contests/' + data[1] + '/submissions?f.Task=' + data[0] + '&f.Language=3003&f.Status=AC&f.User=&page='
     page_number = 1
     submissions_url = []
-    upper_bound = 5 #the number of codes to check
+    upper_bound = 10 #the number of codes to check
     cnt = 0
     end = False
     while not end:
@@ -195,7 +169,6 @@ def get_codes(data):
     return clean_codes
 
 def classify(statement, codes):
-    print(statement)
     tags = ['グラフ', '数論', '幾何', '動的計画法', 'データ構造', '文字列', '確率・組合せ', 'ゲーム']
     apparent_keys = [['グラフ', '木', '連結', '辺', '頂点', 'パス',],
                      [],
@@ -265,18 +238,10 @@ def classify(statement, codes):
     return tag_list
 
 def make_database(tag_list, type):
-    #sql = sqlite3.connect('/usr/share/nginx/html/database/problems.db')
-    sql = sqlite3.connect('./database/problems.db')
-    if type == 0:
-        sql.execute("delete from AGC")
-    if type == 1:
-        sql.execute("delete from ABC")
-    if type == 2:
-        sql.execute("delete from ARC")
-    if type == 3:
-        sql.execute("delete from APC")
-    if type == 4:
-        sql.execute("delete from Others")
+    pat = ["AGC", "ABC", "ARC", "APC", "Others"]
+    sql = sqlite3.connect('/usr/share/nginx/html/database/problems.db')
+    #sql = sqlite3.connect('./database/problems.db')
+    sql.execute("delete from " + pat[type])
     sql.commit()
     sql.close()
     for data_tags in tag_list:
@@ -285,7 +250,6 @@ def make_database(tag_list, type):
         problem_id = d[0]
         tags = ' '.join(data_tags[1])
         name = d[2][3:]
-
         id = ''
         if type == 0 or type == 2 or type == 3:
             id = id + d[1][0:3].upper() + ' ' + d[1][3:] + ' ' + d[2][0]
@@ -303,33 +267,16 @@ def make_database(tag_list, type):
             soup = BeautifulSoup(html.text, 'lxml')
             title = soup.find("a", class_="contest-title").string
             id = title + ' ' + d[2][0]
-
-        print(problem_id, id, name, url, tags)
-
         data = [problem_id, id, name, url, tags]
-
-        #sql = sqlite3.connect('/usr/share/nginx/html/database/problems.db')
-        sql = sqlite3.connect('./database/problems.db')
-        if type == 0:
-            sql.execute("create table if not exists AGC(problem_id, id, name, url, tags)")
-            sql.execute("insert into AGC values(?, ?, ?, ?, ?)", data)
-        elif type == 1:
-            sql.execute("create table if not exists ABC(problem_id, id, name, url, tags)")
-            sql.execute("insert into ABC values(?, ?, ?, ?, ?)", data)
-        elif type == 2:
-            sql.execute("create table if not exists ARC(problem_id, id, name, url, tags)")
-            sql.execute("insert into ARC values(?, ?, ?, ?, ?)", data)
-        elif type == 3:
-            sql.execute("create table if not exists APC(problem_id, id, name, url, tags)")
-            sql.execute("insert into APC values(?, ?, ?, ?, ?)", data)
-        elif type == 4:
-            sql.execute("create table if not exists Others(problem_id, id, name, url, tags)")
-            sql.execute("insert into Others values(?, ?, ?, ?, ?)", data)
+        sql = sqlite3.connect('/usr/share/nginx/html/database/problems.db')
+        #sql = sqlite3.connect('./database/problems.db')
+        sql.execute("create table if not exists " + pat[type] + "(problem_id, id, name, url, tags)")
+        sql.execute("insert into " + pat[type] + " values(?, ?, ?, ?, ?)", data)
         sql.commit()
         sql.close()
 
 if __name__ == '__main__':
-    for type in range(0, 1): #AGC:0, ABC:1, ARC:2, APC:3, Others:4
+    for type in range(0, 5): #AGC:0, ABC:1, ARC:2, APC:3, Others:4
         all_data = get_all_data(type) #[[id, contest_id, title], ... ]
         if type == 1:
             for i in range(0, len(all_data)): #modify the contest_id
@@ -337,12 +284,11 @@ if __name__ == '__main__':
                     all_data[i][1] = all_data[i - 2][1]
         tag_list = [] #[[data, [tag0, tag1, ...]], ...]
         for data in all_data:
-            print(data)
             statement = get_statement(data)
             if len(statement) == 0:
-                print("continue")
                 continue
             codes = get_codes(data)
             tags = classify(statement, codes)
             tag_list.append([data, tags])
         make_database(tag_list, type)
+    print("Success")
