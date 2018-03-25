@@ -1,4 +1,7 @@
-import sqlite3
+import sqlite3, sys, io
+sys.stdin = io.TextIOWrapper(sys.stdin.buffer, encoding='utf-8')
+sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
 
 def fixed_part1():
     print("""<!DOCTYPE html>
@@ -65,6 +68,10 @@ def table(type):
         print("        <h3 class='ui block header'>Atcoder Beginner Contest</h3>")
     elif type == 2:
         print("        <h3 class='ui block header'>Atcoder Regular Contest</h3>")
+    elif type == 3:
+        print("        <h3 class='ui block header'>Atcoder Petrozavodsk Contest</h3>")
+    elif type == 4:
+        print("        <h3 class='ui block header'>Other Contest</h3>")
 
     print("""        <table class="ui striped table">
             <thead>
@@ -77,7 +84,7 @@ def table(type):
     print("            <tbody>")
 
 
-    sql = sqlite3.connect('./database/problems.db')
+    sql = sqlite3.connect('/usr/share/nginx/html/database/problems.db')
     cur = sql.cursor()
     if type == 0:
         cur.execute("SELECT * FROM sqlite_master where type='table' and name='AGC'")
@@ -89,11 +96,21 @@ def table(type):
         ok = cur.fetchone()
         if ok != None:
             cur.execute('select * from ABC')
-    else:
+    elif type == 2:
         cur.execute("SELECT * FROM sqlite_master where type='table' and name='ARC'")
         ok = cur.fetchone()
         if ok != None:
             cur.execute('select * from ARC')
+    elif type == 3:
+        cur.execute("SELECT * FROM sqlite_master where type='table' and name='APC'")
+        ok = cur.fetchone()
+        if ok != None:
+            cur.execute('select * from APC')
+    elif type == 4:
+        cur.execute("SELECT * FROM sqlite_master where type='table' and name='Others'")
+        ok = cur.fetchone()
+        if ok != None:
+            cur.execute('select * from Others')
     res = cur.fetchall()
     for row in res:
         print('                <tr>')
@@ -125,6 +142,8 @@ def generate():
     table(0)
     table(1)
     table(2)
+    table(3)
+    table(4)
     fixed_part2()
 
 if __name__ == '__main__':

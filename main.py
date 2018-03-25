@@ -1,22 +1,26 @@
-import requests, re, webbrowser, MeCab, glob, sqlite3, time, json
+import requests, re, webbrowser, glob, sqlite3, time, json, sys, io
 from bs4 import BeautifulSoup
-mecab = MeCab.Tagger('-d /usr/local/mecab/lib/mecab/dic/mecab-ipadic-neologd/')
+from janome.tokenizer import Tokenizer
+sys.stdin = io.TextIOWrapper(sys.stdin.buffer, encoding='utf-8')
+sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
 
 def get_all_data(type):
-    '''get json from the web and write it to local file
+    #'''get json from the web and write it to local file
     html = requests.get('http://kenkoooo.com/atcoder/atcoder-api/info/problems')
     soup = BeautifulSoup(html.text, 'lxml')
-    json_data = soup.find("p").string
+    json_data_raw = soup.find("p").string
+    #with open('/usr/share/nginx/html/json/problems.json', mode = 'w', encoding = 'utf-8') as file:
     with open('./json/problems.json', mode = 'w', encoding = 'utf-8') as file:
-        file.write(json_data)
-    '''
-    return
+        file.write(json_data_raw)
+    #'''
+    #json_data = open('/usr/share/nginx/html/json/problems.json', 'r')
     json_data = open('./json/problems.json', 'r')
     json_dict = json.load(json_data)
 
-    if type == 0 or type == 2: #AGC or ARC
+    if type == 0 or type == 2 or type == 3: #AGC or ARC or APC
         res = []
-        for number in range(1, 10):
+        for number in range(1, 3):
             numstr = str(number)
             if len(numstr) == 1:
                 numstr = '00' + numstr
@@ -29,6 +33,10 @@ def get_all_data(type):
             elif type == 2:
                 for data in json_dict:
                     if data['id'][0:6] == 'arc' + numstr:
+                        res.append([data['id'], data['contest_id'], data['title']])
+            elif type == 3:
+                for data in json_dict:
+                    if data['id'][0:6] == 'apc' + numstr:
                         res.append([data['id'], data['contest_id'], data['title']])
         res.sort()
         return res
@@ -67,24 +75,40 @@ def get_all_data(type):
                                 print(data)
                                 break
         return res
+    elif type == 4:
+        res = []
+        cnt = 0
+        ub = 50000
+        for data in json_dict:
+            if cnt > ub:
+                break
+            t = data['id'][0:3]
+            if t != 'agc' and t != 'abc' and t != 'arc' and t != 'apc':
+                res.append([data['id'], data['contest_id'], data['title']])
+                cnt += 1
+        res.sort()
+        print(len(res))
+        return res
     else:
         assert false
 
 def tokenize(text):
     list = []
-    mecab.parse("")
-    node = mecab.parseToNode(text)
-    while (node):
-        feature = node.feature.split(',')
-        is_noun = feature[0] == '名詞'
-        is_number = feature[1] == '数'
-        #print(node.surface)
-        if is_noun and not is_number:
-            list.append(node.surface.lower())
-        node = node.next
+    t = Tokenizer()
+    tokens = t.tokenize(text)
+    for token in tokens:
+        s = str(token.surface)
+        large = True
+        for char in s:
+            if ord(char) < 128:
+                large = False
+                break
+        if large and token.part_of_speech.split(',')[0] == u'名詞' and token.part_of_speech.split(',')[1] != u'数':
+            list.append(s)
     return list
 
 def clean_ja(texts):
+    #stop_words_filename = glob.glob('/usr/share/nginx/html/stop_words.txt')
     stop_words_filename = glob.glob('./stop_words.txt')
     f = open(stop_words_filename[0])
     stop_words = f.read()
@@ -97,7 +121,10 @@ def get_statement(data):
     html = requests.get(url)
     soup = BeautifulSoup(html.text, 'lxml')
     all_text = soup.find("div", {"id" : "task-statement"})
-    statement = all_text.find("section").text
+    get_statement = all_text.find("section")
+    if get_statement == None:
+        return []
+    statement = get_statement.text
     tokenized_statement = tokenize(statement)
     clean_statement = clean_ja(tokenized_statement)
     return clean_statement
@@ -168,6 +195,7 @@ def get_codes(data):
     return clean_codes
 
 def classify(statement, codes):
+    print(statement)
     tags = ['グラフ', '数論', '幾何', '動的計画法', 'データ構造', '文字列', '確率・組合せ', 'ゲーム']
     apparent_keys = [['グラフ', '木', '連結', '辺', '頂点', 'パス',],
                      [],
@@ -237,14 +265,29 @@ def classify(statement, codes):
     return tag_list
 
 def make_database(tag_list, type):
+    #sql = sqlite3.connect('/usr/share/nginx/html/database/problems.db')
+    sql = sqlite3.connect('./database/problems.db')
+    if type == 0:
+        sql.execute("delete from AGC")
+    if type == 1:
+        sql.execute("delete from ABC")
+    if type == 2:
+        sql.execute("delete from ARC")
+    if type == 3:
+        sql.execute("delete from APC")
+    if type == 4:
+        sql.execute("delete from Others")
+    sql.commit()
+    sql.close()
     for data_tags in tag_list:
         d = data_tags[0]
         url = 'https://beta.atcoder.jp/contests/' + d[1] + '/tasks/' + d[0]
-        name = d[2][3:]
-        tags = ' '.join(data_tags[1])
-        id = ''
         problem_id = d[0]
-        if type == 0 or type == 2:
+        tags = ' '.join(data_tags[1])
+        name = d[2][3:]
+
+        id = ''
+        if type == 0 or type == 2 or type == 3:
             id = id + d[1][0:3].upper() + ' ' + d[1][3:] + ' ' + d[2][0]
         if type == 1:
             id = id + d[1][0:3].upper() + ' ' + d[1][3:]
@@ -255,10 +298,17 @@ def make_database(tag_list, type):
                     id = id + ' D'
             else:
                 id = id + ' ' + d[2][0].upper()
+        elif type == 4:
+            html = requests.get(url)
+            soup = BeautifulSoup(html.text, 'lxml')
+            title = soup.find("a", class_="contest-title").string
+            id = title + ' ' + d[2][0]
+
         print(problem_id, id, name, url, tags)
 
         data = [problem_id, id, name, url, tags]
 
+        #sql = sqlite3.connect('/usr/share/nginx/html/database/problems.db')
         sql = sqlite3.connect('./database/problems.db')
         if type == 0:
             sql.execute("create table if not exists AGC(problem_id, id, name, url, tags)")
@@ -269,11 +319,17 @@ def make_database(tag_list, type):
         elif type == 2:
             sql.execute("create table if not exists ARC(problem_id, id, name, url, tags)")
             sql.execute("insert into ARC values(?, ?, ?, ?, ?)", data)
+        elif type == 3:
+            sql.execute("create table if not exists APC(problem_id, id, name, url, tags)")
+            sql.execute("insert into APC values(?, ?, ?, ?, ?)", data)
+        elif type == 4:
+            sql.execute("create table if not exists Others(problem_id, id, name, url, tags)")
+            sql.execute("insert into Others values(?, ?, ?, ?, ?)", data)
         sql.commit()
         sql.close()
 
 if __name__ == '__main__':
-    for type in range(2, 3): #AGC:0, ABC:1, ARC:2
+    for type in range(0, 1): #AGC:0, ABC:1, ARC:2, APC:3, Others:4
         all_data = get_all_data(type) #[[id, contest_id, title], ... ]
         if type == 1:
             for i in range(0, len(all_data)): #modify the contest_id
@@ -283,6 +339,9 @@ if __name__ == '__main__':
         for data in all_data:
             print(data)
             statement = get_statement(data)
+            if len(statement) == 0:
+                print("continue")
+                continue
             codes = get_codes(data)
             tags = classify(statement, codes)
             tag_list.append([data, tags])
