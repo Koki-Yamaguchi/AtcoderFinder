@@ -1,6 +1,7 @@
 import requests, re, webbrowser, glob, sqlite3, time, json, sys, io, codecs
 from bs4 import BeautifulSoup
 from janome.tokenizer import Tokenizer
+from operator import itemgetter
 sys.stdin = io.TextIOWrapper(sys.stdin.buffer, encoding='utf-8')
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
@@ -24,7 +25,7 @@ def get_all_data(type):
             t = data['id'][0:3]
             if t not in pat:
                 res.append([data['id'], data['contest_id'], data['title']])
-        res.sort()
+        res.sort(key = lambda x:(x[1],x[2]))
         return res
     elif type == 1: #ABC
         res = []
@@ -252,7 +253,7 @@ def make_database(tag_list, type):
         name = d[2][3:]
         id = ''
         if type == 0 or type == 2 or type == 3:
-            id = id + d[1][0:3].upper() + ' ' + d[1][3:] + ' ' + d[2][0]
+            id = id + d[0][0:3].upper() + ' ' + d[0][3:] + ' ' + d[2][0]
         if type == 1:
             id = id + d[1][0:3].upper() + ' ' + d[1][3:]
             if d[0][0:3] == 'arc':
@@ -268,6 +269,8 @@ def make_database(tag_list, type):
             title = soup.find("a", class_="contest-title").string
             id = title + ' ' + d[2][0]
         data = [problem_id, id, name, url, tags]
+        print(data)
+        continue
         sql = sqlite3.connect('/usr/share/nginx/html/database/problems.db')
         #sql = sqlite3.connect('./database/problems.db')
         sql.execute("create table if not exists " + pat[type] + "(problem_id, id, name, url, tags)")
