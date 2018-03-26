@@ -269,8 +269,6 @@ def make_database(tag_list, type):
             title = soup.find("a", class_="contest-title").string
             id = title + ' ' + d[2][0]
         data = [problem_id, id, name, url, tags]
-        print(data)
-        continue
         sql = sqlite3.connect('/usr/share/nginx/html/database/problems.db')
         #sql = sqlite3.connect('./database/problems.db')
         sql.execute("create table if not exists " + pat[type] + "(problem_id, id, name, url, tags)")
@@ -281,10 +279,14 @@ def make_database(tag_list, type):
 if __name__ == '__main__':
     for type in range(0, 5): #AGC:0, ABC:1, ARC:2, APC:3, Others:4
         all_data = get_all_data(type) #[[id, contest_id, title], ... ]
+        #modify contest name
         if type == 1:
-            for i in range(0, len(all_data)): #modify the contest_id
+            for i in range(0, len(all_data)):
                 if all_data[i][1][0:3] == 'arc':
                     all_data[i][1] = all_data[i - 2][1]
+        if type == 2:
+            for data in all_data:
+                data[1] = data[0][0:6]
         tag_list = [] #[[data, [tag0, tag1, ...]], ...]
         for data in all_data:
             statement = get_statement(data)
