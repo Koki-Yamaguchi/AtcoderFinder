@@ -136,7 +136,7 @@ def get_codes(data):
     all_url = 'https://beta.atcoder.jp/contests/' + data[1] + '/submissions?f.Task=' + data[0] + '&f.Language=3003&f.Status=AC&f.User=&page='
     page_number = 1
     submissions_url = []
-    upper_bound = 10 #the number of codes to check
+    upper_bound = 30 #the number of codes to check
     cnt = 0
     end = False
     while not end:
@@ -253,7 +253,7 @@ def make_database(tag_list, type):
         name = d[2][3:]
         id = ''
         if type == 0 or type == 2 or type == 3:
-            id = id + d[0][0:3].upper() + ' ' + d[0][3:] + ' ' + d[2][0]
+            id = id + d[0][0:3].upper() + ' ' + d[0][3:6] + ' ' + d[2][0]
         if type == 1:
             id = id + d[1][0:3].upper() + ' ' + d[1][3:]
             if d[0][0:3] == 'arc':
