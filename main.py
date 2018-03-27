@@ -2,9 +2,17 @@ import requests, re, webbrowser, glob, sqlite3, time, json, sys, io, codecs
 from bs4 import BeautifulSoup
 from janome.tokenizer import Tokenizer
 from operator import itemgetter
+import classifier
 sys.stdin = io.TextIOWrapper(sys.stdin.buffer, encoding='utf-8')
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
+
+#FOR DEBUG
+NUMBER_OF_PROBLEMS = 100000  
+CODES_PER_PROBLEM = 40   
+RANGE_LEFT = 0          
+RANGE_RIGHT = 5        
+MAKE_DATABASE = True
 
 def get_all_data(type):
     html = requests.get('http://kenkoooo.com/atcoder/atcoder-api/info/problems')
@@ -14,9 +22,13 @@ def get_all_data(type):
     pat = ['agc', 'abc', 'arc', 'apc']
     if type == 0 or type == 2 or type == 3:
         res = []
+        cnt = 0
         for data in json_dict:
+            if cnt >= NUMBER_OF_PROBLEMS:
+                break
             if data['id'][0:3] == pat[type]:
                 res.append([data['id'], data['contest_id'], data['title']])
+                cnt += 1
         res.sort()
         return res
     elif type == 4:
@@ -67,7 +79,7 @@ def get_all_data(type):
 
 def tokenize(text):
     list = []
-    t = Tokenizer()
+    t = Tokenizer("userdic.csv", udic_enc="utf8")
     tokens = t.tokenize(text)
     for token in tokens:
         s = str(token.surface)
@@ -81,12 +93,8 @@ def tokenize(text):
     return list
 
 def clean_ja(texts):
-    stop_words_filename = glob.glob('/usr/share/nginx/html/stop_words.txt')
-    #stop_words_filename = glob.glob('./stop_words.txt')
-
     stop_words = codecs.open('/usr/share/nginx/html/stop_words.txt', 'r', 'utf-8')
     #stop_words = codecs.open('./stop_words.txt', 'r', 'utf-8')
-
     result = [word for word in texts if word not in stop_words]
     stop_words.close()
     return result
@@ -136,7 +144,6 @@ def get_codes(data):
     all_url = 'https://beta.atcoder.jp/contests/' + data[1] + '/submissions?f.Task=' + data[0] + '&f.Language=3003&f.Status=AC&f.User=&page='
     page_number = 1
     submissions_url = []
-    upper_bound = 30 #the number of codes to check
     cnt = 0
     end = False
     while not end:
@@ -150,7 +157,7 @@ def get_codes(data):
             suburl = e.attrs['href']
             submissions_url.append('https://beta.atcoder.jp' + suburl)
             cnt += 1
-            if cnt >= upper_bound:
+            if cnt >= CODES_PER_PROBLEM:
                 end = True
                 break
         page_number += 1
@@ -168,75 +175,6 @@ def get_codes(data):
         clean_words = clean(unique_words, stop_words)
         clean_codes.append(clean_words)
     return clean_codes
-
-def classify(statement, codes):
-    tags = ['グラフ', '数論', '幾何', '動的計画法', 'データ構造', '文字列', '確率・組合せ', 'ゲーム']
-    apparent_keys = [['グラフ', '木', '連結', '辺', '頂点', 'パス',],
-                     [],
-                     ['半径',],
-                     [],
-                     [],
-                     ['文字列',],
-                     ['確率',],
-                     ['ゲーム', 'プレイ', 'プレイヤー', '勝ち', '負け'],
-                    ]
-    good_keys =     [['G', 'g', 'Edge', 'edge', 'Graph', 'graph', 'cycle', 'deg', 'dfs', 'tree', 'dijkstra',],
-                     ['gcd', 'lcm', 'extgcd', 'prime', 'phi',],
-                     ['point', 'points', 'Point', 'Points', 'line', 'Line', 'imag', 'real', 
-                      'circle', 'rad', 'EPS', 'eps', 'Convexhull', 'Intersect', 'intersect',],
-                     ['dp',],
-                     ['SegmentTree', 'segmenttree', 'segtree', 'seg', 'Segtree', 'Seg', 
-                      'FenwickTree', 'fenwicktree', 'Fenwick', 'fenwick', 'bit', 'BIT', 'BinaryIndexedTree', 
-                      'UnionFind', 'UF', 'uf', 'unite', 'same', 'unionfind', 'Unionfind',
-                      'LazySegmentTree', 'lazy',
-                      'update', 'build', 'query',],
-                     [],
-                     ['C', 'inv', 'Inv', 'fact', 'invfact', 'Fact', 'Invfact', 'choose', 'mod', 'MOD'],
-                     ['grundy', 'g', 'gr', 'Alice', 'Bob', 'Takahashi', 'Aoki', 'First', 'Second',
-                      'ALICE', 'BOB', 'TAKAHASHI', 'AOKI', 'Draw', 'DRAW',],
-                    ]
-    not_good_keys = [['gcd', 'r', 'R'],
-                     [],
-                     [],
-                     [],
-                     [],
-                     [],
-                     [],
-                     [],
-                    ]
-    tag_list = []
-    for i in range(0, len(tags)):
-        ok = False
-        for key in apparent_keys[i]:
-            if key in statement:
-                ok = True
-                break
-        if not ok:
-            yes_cnt = 0
-            no_cnt = 0
-            for code in codes:
-                good = False
-                for key in good_keys[i]:
-                    if key in code:
-                        good = True
-                if not good:
-                    no_cnt += 1
-                else:
-                    for key in not_good_keys[i]:
-                        if key in code:
-                            good = False
-                    if not good:
-                        no_cnt += 1
-                    else:
-                        yes_cnt += 1
-            if yes_cnt > no_cnt:
-                ok = True
-        if ok:
-            tag_list.append(tags[i])
-
-    if len(tag_list) == 0:
-        tag_list.append('その他')
-    return tag_list
 
 def make_database(tag_list, type):
     pat = ["AGC", "ABC", "ARC", "APC", "Others"]
@@ -269,6 +207,9 @@ def make_database(tag_list, type):
             title = soup.find("a", class_="contest-title").string
             id = title + ' ' + d[2][0]
         data = [problem_id, id, name, url, tags]
+        if not MAKE_DATABASE:
+            print(data)
+            continue
         sql = sqlite3.connect('/usr/share/nginx/html/database/problems.db')
         #sql = sqlite3.connect('./database/problems.db')
         sql.execute("create table if not exists " + pat[type] + "(problem_id, id, name, url, tags)")
@@ -277,9 +218,8 @@ def make_database(tag_list, type):
         sql.close()
 
 if __name__ == '__main__':
-    for type in range(0, 5): #AGC:0, ABC:1, ARC:2, APC:3, Others:4
+    for type in range(RANGE_LEFT, RANGE_RIGHT): #AGC:0, ABC:1, ARC:2, APC:3, Others:4
         all_data = get_all_data(type) #[[id, contest_id, title], ... ]
-        #modify contest name
         if type == 1:
             for i in range(0, len(all_data)):
                 if all_data[i][1][0:3] == 'arc':
@@ -293,7 +233,7 @@ if __name__ == '__main__':
             if len(statement) == 0:
                 continue
             codes = get_codes(data)
-            tags = classify(statement, codes)
+            tags = classifier.classify(statement, codes)
             tag_list.append([data, tags])
         make_database(tag_list, type)
     print("Success")
