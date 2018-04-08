@@ -1,36 +1,7 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Atcoder Finder</title>
-    <meta charset="UTF-8">
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/semantic-ui@2.3.0/dist/semantic.min.js"></script>
-    <script defer src="https://use.fontawesome.com/releases/v5.0.8/js/all.js"></script>
-    <script src="./js/filter.js"></script>
-    <script src="./js/top.js"></script>
-    <script src="./js/reactive_judge.js"></script>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/semantic-ui@2.3.0/dist/semantic.min.css">
-    <link rel="stylesheet" href="./css/style.css">
-</head>
-<body>
-    <p id="page-top"><a href="#wrap">トップに戻る</a></p>
+import header, footer
 
-    <div class="ui inverted menu">
-        <a class="item" href="./index.html">
-            <h3>Atcoder Finder</h3>
-        </a>
-        <a class="item" href="./specific.html">
-            <h3>Specific</h3>
-        </a>
-        <a class="item" href="./about.html">
-            <h3>About</h3>
-        </a>
-        <a class="item" href="https://github.com/Koki-Yamaguchi/AtcoderFinder">
-            <h3>Source</h3>
-        </a>
-    </div>
-    <div class="ui container">
-        <h3 class='ui top attached header'>Atcodr Finderについて</h3>
+def about():
+    print("""        <h3 class='ui top attached header'>Atcodr Finderについて</h3>
         <div class='ui attached segment'>
         <p>Atcoder Finderは過去に<a href='https://atcoder.jp/'>Atcoder</a>で出題された問題に自動的にタグをつけるサービスです。
         特定のジャンルの問題を探したいときなどにご活用ください。</p>
@@ -71,13 +42,12 @@
         ・<a href="https://github.com/Koki-Yamaguchi/AtcoderFinder/issues">Github Issues</a><br>
         のいずれかよりご連絡いただけると嬉しいです。
         </p>
-        </div>
-    </div>
-    <div class="ui inverted vertical footer segment">
-        <div class="ui center aligned container">
-            <h4 class="ui inverted header">Created by Koki Yamaguchi</h4>
-            <p>Twitter @Ymgch_K</p>
-        </div>
-    </div>
-</body>
-</html>
+        </div>""")
+
+def generate():
+    header.generate()
+    about()
+    footer.generate()
+
+if __name__ == '__main__':
+    generate()

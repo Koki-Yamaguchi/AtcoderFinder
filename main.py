@@ -8,10 +8,9 @@ sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
 
 #FOR DEBUG
-NUMBER_OF_PROBLEMS = 100000  
-CODES_PER_PROBLEM = 40   
-RANGE_LEFT = 0          
-RANGE_RIGHT = 5        
+CODES_PER_PROBLEM = 10
+RANGE_LEFT = 2          
+RANGE_RIGHT = 3
 MAKE_DATABASE = True
 
 def get_all_data(type):
@@ -24,8 +23,12 @@ def get_all_data(type):
         res = []
         cnt = 0
         for data in json_dict:
-            if cnt >= NUMBER_OF_PROBLEMS:
-                break
+            '''
+            d = data['id'][0:6]
+            if d == 'arc015':
+                res.append([data['id'], data['contest_id'], data['title']])
+            continue
+            '''
             if data['id'][0:3] == pat[type]:
                 res.append([data['id'], data['contest_id'], data['title']])
                 cnt += 1
@@ -41,7 +44,7 @@ def get_all_data(type):
         return res
     elif type == 1: #ABC
         res = []
-        for number in range(1, 1000):
+        for number in range(1, 10000):
             numstr = str(number)
             if len(numstr) == 1:
                 numstr = '00' + numstr
@@ -79,7 +82,8 @@ def get_all_data(type):
 
 def tokenize(text):
     list = []
-    t = Tokenizer("userdic.csv", udic_enc="utf8")
+    #t = Tokenizer("/usr/share/nginx/html/userdic.csv", udic_enc="utf8")
+    t = Tokenizer("./userdic.csv", udic_enc="utf8")
     tokens = t.tokenize(text)
     for token in tokens:
         s = str(token.surface)
@@ -93,8 +97,8 @@ def tokenize(text):
     return list
 
 def clean_ja(texts):
-    stop_words = codecs.open('/usr/share/nginx/html/stop_words.txt', 'r', 'utf-8')
-    #stop_words = codecs.open('./stop_words.txt', 'r', 'utf-8')
+    #stop_words = codecs.open('/usr/share/nginx/html/stop_words.txt', 'r', 'utf-8')
+    stop_words = codecs.open('./stop_words.txt', 'r', 'utf-8')
     result = [word for word in texts if word not in stop_words]
     stop_words.close()
     return result
@@ -131,7 +135,11 @@ def get_words(code):
             str = str + w
     if str != "":
         words.append(str)
-    return words
+    words2 = []
+    for i in range(1, len(words)):
+        if words[i - 1] != 'include':
+            words2.append(words[i])
+    return words2
 
 def clean(words, stop_words):
     clean_words = []
@@ -178,16 +186,19 @@ def get_codes(data):
 
 def make_database(tag_list, type):
     pat = ["AGC", "ABC", "ARC", "APC", "Others"]
-    sql = sqlite3.connect('/usr/share/nginx/html/database/problems.db')
-    #sql = sqlite3.connect('./database/problems.db')
+    '''
+    #sql = sqlite3.connect('/usr/share/nginx/html/database/problems.db')
+    sql = sqlite3.connect('./database/problems3.db')
     sql.execute("delete from " + pat[type])
     sql.commit()
     sql.close()
+    '''
     for data_tags in tag_list:
         d = data_tags[0]
         url = 'https://beta.atcoder.jp/contests/' + d[1] + '/tasks/' + d[0]
         problem_id = d[0]
-        tags = ' '.join(data_tags[1])
+        tags0 = ' '.join(data_tags[1])
+        tags1 = ' '.join(data_tags[2])
         name = d[2][3:]
         id = ''
         if type == 0 or type == 2 or type == 3:
@@ -206,14 +217,13 @@ def make_database(tag_list, type):
             soup = BeautifulSoup(html.text, 'lxml')
             title = soup.find("a", class_="contest-title").string
             id = title + ' ' + d[2][0]
-        data = [problem_id, id, name, url, tags]
+        data = [problem_id, id, name, url, tags0, tags1]
         if not MAKE_DATABASE:
-            print(data)
             continue
-        sql = sqlite3.connect('/usr/share/nginx/html/database/problems.db')
-        #sql = sqlite3.connect('./database/problems.db')
-        sql.execute("create table if not exists " + pat[type] + "(problem_id, id, name, url, tags)")
-        sql.execute("insert into " + pat[type] + " values(?, ?, ?, ?, ?)", data)
+        #sql = sqlite3.connect('/usr/share/nginx/html/database/problems.db')
+        sql = sqlite3.connect('./database/problems3.db')
+        sql.execute("create table if not exists " + pat[type] + "(problem_id, id, name, url, tags0, tags1)")
+        sql.execute("insert into " + pat[type] + " values(?, ?, ?, ?, ?, ?)", data)
         sql.commit()
         sql.close()
 
@@ -227,13 +237,15 @@ if __name__ == '__main__':
         if type == 2:
             for data in all_data:
                 data[1] = data[0][0:6]
-        tag_list = [] #[[data, [tag0, tag1, ...]], ...]
+        tag_list = [] #[[data, [tag0_0, tag0_1, ...], [tag1_0, tag1_1, ...]], [data, ...]]
         for data in all_data:
             statement = get_statement(data)
             if len(statement) == 0:
                 continue
             codes = get_codes(data)
-            tags = classifier.classify(statement, codes)
-            tag_list.append([data, tags])
+            tags0 = classifier.classify(statement, codes)
+            tags1 = classifier.classify_code(codes)
+            print(data[0], tags0, tags1, flush=True)
+            tag_list.append([data, tags0, tags1])
         make_database(tag_list, type)
     print("Success")
