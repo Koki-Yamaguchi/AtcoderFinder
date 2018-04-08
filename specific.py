@@ -23,11 +23,8 @@ def generate():
     form.generate()
     filter()
     ACfilter.generate()
-    table.generate(0, 1)
-    table.generate(1, 1)
-    table.generate(2, 1)
-    table.generate(3, 1)
-    table.generate(4, 1)
+    for i in range(5):
+        table.generate(i, 1)
     footer.generate()
 
 if __name__ == '__main__':
